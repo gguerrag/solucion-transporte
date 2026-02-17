@@ -1,0 +1,76 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin123
+
+  producer-ubicacion:
+    build: ./producer-ubicacion
+    container_name: producer-ubicacion
+    ports:
+      - "8081:8081"
+    environment:
+      RABBIT_HOST: rabbitmq
+      RABBIT_PORT: 5672
+      RABBIT_USER: admin
+      RABBIT_PASS: admin123
+      UBICACIONES_QUEUE: cola.ubicaciones.vehiculos
+    depends_on:
+      - rabbitmq
+
+  producer-horario:
+    build: ./producer-horario
+    container_name: producer-horario
+    ports:
+      - "8082:8082"
+    environment:
+      RABBIT_HOST: rabbitmq
+      RABBIT_PORT: 5672
+      RABBIT_USER: admin
+      RABBIT_PASS: admin123
+      HORARIOS_QUEUE: cola.horarios.vehiculos
+    depends_on:
+      - rabbitmq
+
+  consumer-ubicaciones-oracle:
+    build: ./consumer-ubicaciones-oracle
+    container_name: consumer-ubicaciones-oracle
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: admin
+      SPRING_RABBITMQ_PASSWORD: admin123
+      APP_QUEUES_UBICACIONES: cola.ubicaciones.vehiculos
+
+      ORACLE_SERVICE: ${ORACLE_SERVICE}
+      ORACLE_USER: ${ORACLE_USER}
+      ORACLE_PASSWORD: ${ORACLE_PASSWORD}
+
+      # ESTA RUTA ES DENTRO DEL CONTENEDOR
+      TNS_ADMIN: /opt/oracle/wallet
+    volumes:
+      # Monta el wallet desde tu repo al contenedor (solo lectura)
+      - ./wallet:/opt/oracle/wallet:ro
+    depends_on:
+      - rabbitmq
+
+
+  consumer-horarios-files:
+    build: ./consumer-horarios-files
+    container_name: consumer-horarios-files
+    environment:
+      spring.rabbitmq.host: rabbitmq
+      spring.rabbitmq.port: 5672
+      spring.rabbitmq.username: admin
+      spring.rabbitmq.password: admin123
+      app.queues.horarios: cola.horarios.vehiculos
+      app.files.output-dir: /data/horarios
+    volumes:
+      - ./out/horarios:/data/horarios
+    depends_on:
+      - rabbitmq

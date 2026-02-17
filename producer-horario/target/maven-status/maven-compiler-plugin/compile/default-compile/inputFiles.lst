@@ -1,0 +1,5 @@
+/Users/gonzaloguerragaldames/Downloads/solucion-transporte/producer-horario/src/main/java/cl/transporte/producer_horario/ProducerHorarioApplication.java
+/Users/gonzaloguerragaldames/Downloads/solucion-transporte/producer-horario/src/main/java/cl/transporte/producer_horario/config/RabbitConfig.java
+/Users/gonzaloguerragaldames/Downloads/solucion-transporte/producer-horario/src/main/java/cl/transporte/producer_horario/controller/HorarioController.java
+/Users/gonzaloguerragaldames/Downloads/solucion-transporte/producer-horario/src/main/java/cl/transporte/producer_horario/dto/HorarioMsg.java
+/Users/gonzaloguerragaldames/Downloads/solucion-transporte/producer-horario/src/main/java/cl/transporte/producer_horario/service/HorarioProducer.java

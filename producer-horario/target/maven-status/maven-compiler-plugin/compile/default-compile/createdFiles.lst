@@ -1,0 +1,5 @@
+cl/transporte/producer_horario/service/HorarioProducer.class
+cl/transporte/producer_horario/dto/HorarioMsg.class
+cl/transporte/producer_horario/config/RabbitConfig.class
+cl/transporte/producer_horario/controller/HorarioController.class
+cl/transporte/producer_horario/ProducerHorarioApplication.class
