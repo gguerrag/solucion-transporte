@@ -1,7 +1,16 @@
-.env
-wallet/
-**/target/
-**/.idea/
-**/.vscode/
-**/*.log
+# Maven / Java
+target/
+out/
+*.log
+
+# OS / IDE
 .DS_Store
+.idea/
+.vscode/
+
+# Node
+node_modules/
+dist/
+
+# Env
+.env
