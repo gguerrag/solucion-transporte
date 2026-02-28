@@ -1,76 +1,145 @@
 services:
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: rabbitmq
-    ports:
-      - "5672:5672"
-      - "15672:15672"
+  # -------------------- ZOOKEEPER x3 --------------------
+  zoo1:
+    image: bitnamilegacy/zookeeper:3.9.3-debian-12-r22
     environment:
-      RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: admin123
+      - ALLOW_ANONYMOUS_LOGIN=yes
+      - ZOO_SERVER_ID=1
+      - ZOO_SERVERS=zoo1:2888:3888,zoo2:2888:3888,zoo3:2888:3888
+    networks: [kafka-net]
 
-  producer-ubicacion:
-    build: ./producer-ubicacion
-    container_name: producer-ubicacion
+  zoo2:
+    image: bitnamilegacy/zookeeper:3.9.3-debian-12-r22
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+      - ZOO_SERVER_ID=2
+      - ZOO_SERVERS=zoo1:2888:3888,zoo2:2888:3888,zoo3:2888:3888
+    networks: [kafka-net]
+
+  zoo3:
+    image: bitnamilegacy/zookeeper:3.9.3-debian-12-r22
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+      - ZOO_SERVER_ID=3
+      - ZOO_SERVERS=zoo1:2888:3888,zoo2:2888:3888,zoo3:2888:3888
+    networks: [kafka-net]
+
+  # -------------------- KAFKA BROKERS x3 --------------------
+  kafka1:
+    image: bitnamilegacy/kafka:4.0.0-debian-12-r10
+    depends_on: [zoo1, zoo2, zoo3]
+    environment:
+      - KAFKA_CFG_BROKER_ID=1
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zoo1:2181,zoo2:2181,zoo3:2181
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka1:9092
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+    networks: [kafka-net]
+
+  kafka2:
+    image: bitnamilegacy/kafka:4.0.0-debian-12-r10
+    depends_on: [zoo1, zoo2, zoo3]
+    environment:
+      - KAFKA_CFG_BROKER_ID=2
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zoo1:2181,zoo2:2181,zoo3:2181
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka2:9092
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+    networks: [kafka-net]
+
+  kafka3:
+    image: bitnamilegacy/kafka:4.0.0-debian-12-r10
+    depends_on: [zoo1, zoo2, zoo3]
+    environment:
+      - KAFKA_CFG_BROKER_ID=3
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zoo1:2181,zoo2:2181,zoo3:2181
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka3:9092
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+    networks: [kafka-net]
+
+  # -------------------- INIT TOPICS --------------------
+  kafka-init:
+    image: bitnamilegacy/kafka:4.0.0-debian-12-r10
+    depends_on: [kafka1, kafka2, kafka3]
+    entrypoint: ["/bin/bash","-lc"]
+    command: >
+      "
+      echo 'Creating topics...';
+      kafka-topics.sh --bootstrap-server kafka1:9092 --create --if-not-exists
+        --topic ${TOPIC_UBICACIONES} --partitions 3 --replication-factor 3;
+      kafka-topics.sh --bootstrap-server kafka1:9092 --create --if-not-exists
+        --topic ${TOPIC_HORARIOS} --partitions 3 --replication-factor 3;
+      echo 'Topics ready.';
+      "
+    environment:
+      - TOPIC_UBICACIONES=${TOPIC_UBICACIONES}
+      - TOPIC_HORARIOS=${TOPIC_HORARIOS}
+    networks: [kafka-net]
+    restart: "no"
+
+  # -------------------- KAFKA UI --------------------
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    depends_on: [kafka1, kafka2, kafka3]
+    ports:
+      - "8080:8080"
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=cluster-s8
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka1:9092,kafka2:9092,kafka3:9092
+    networks: [kafka-net]
+
+  # -------------------- (DIAGRAMA) MS Productor ubicaciones (Cron) --------------------
+  ms-producer-ubicaciones-cron:
+    build:
+      context: ./producer-ubicacion
+    depends_on: [kafka1, kafka2, kafka3, kafka-init]
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}
+      - TOPIC_UBICACIONES=${TOPIC_UBICACIONES}
+      - SERVER_PORT=8081
     ports:
       - "8081:8081"
-    environment:
-      RABBIT_HOST: rabbitmq
-      RABBIT_PORT: 5672
-      RABBIT_USER: admin
-      RABBIT_PASS: admin123
-      UBICACIONES_QUEUE: cola.ubicaciones.vehiculos
-    depends_on:
-      - rabbitmq
+    networks: [kafka-net]
 
-  producer-horario:
-    build: ./producer-horario
-    container_name: producer-horario
+  # -------------------- (DIAGRAMA) MS Consumidor ubicaciones -> productor horarios --------------------
+  ms-consumidor-ubicaciones-productor-horarios:
+    build:
+      context: ./consumer-horarios-files
+    depends_on: [kafka1, kafka2, kafka3, kafka-init]
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}
+      - TOPIC_UBICACIONES=${TOPIC_UBICACIONES}
+      - TOPIC_HORARIOS=${TOPIC_HORARIOS}
+      - SERVER_PORT=8082
     ports:
       - "8082:8082"
+    networks: [kafka-net]
+
+  # -------------------- (DIAGRAMA) MS Monitor y genera resumen (consume ambos) --------------------
+  ms-monitor-y-genera-resumen:
+    build:
+      context: ./ms-monitor-oracle
+    depends_on: [kafka1, kafka2, kafka3, kafka-init]
     environment:
-      RABBIT_HOST: rabbitmq
-      RABBIT_PORT: 5672
-      RABBIT_USER: admin
-      RABBIT_PASS: admin123
-      HORARIOS_QUEUE: cola.horarios.vehiculos
-    depends_on:
-      - rabbitmq
-
-  consumer-ubicaciones-oracle:
-    build: ./consumer-ubicaciones-oracle
-    container_name: consumer-ubicaciones-oracle
-    environment:
-      SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_PORT: 5672
-      SPRING_RABBITMQ_USERNAME: admin
-      SPRING_RABBITMQ_PASSWORD: admin123
-      APP_QUEUES_UBICACIONES: cola.ubicaciones.vehiculos
-
-      ORACLE_SERVICE: ${ORACLE_SERVICE}
-      ORACLE_USER: ${ORACLE_USER}
-      ORACLE_PASSWORD: ${ORACLE_PASSWORD}
-
-      # ESTA RUTA ES DENTRO DEL CONTENEDOR
-      TNS_ADMIN: /opt/oracle/wallet
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}
+      - TOPIC_UBICACIONES=${TOPIC_UBICACIONES}
+      - TOPIC_HORARIOS=${TOPIC_HORARIOS}
+      - ORACLE_USER=${ORACLE_USER}
+      - ORACLE_PASSWORD=${ORACLE_PASSWORD}
+      - ORACLE_SERVICE=${ORACLE_SERVICE}
+      - TNS_ADMIN=${TNS_ADMIN}
+      - SERVER_PORT=8083
+      - TZ=America/Santiago
     volumes:
-      # Monta el wallet desde tu repo al contenedor (solo lectura)
       - ./wallet:/opt/oracle/wallet:ro
-    depends_on:
-      - rabbitmq
+    ports:
+      - "8083:8083"
+    networks: [kafka-net]
 
-
-  consumer-horarios-files:
-    build: ./consumer-horarios-files
-    container_name: consumer-horarios-files
-    environment:
-      spring.rabbitmq.host: rabbitmq
-      spring.rabbitmq.port: 5672
-      spring.rabbitmq.username: admin
-      spring.rabbitmq.password: admin123
-      app.queues.horarios: cola.horarios.vehiculos
-      app.files.output-dir: /data/horarios
-    volumes:
-      - ./out/horarios:/data/horarios
-    depends_on:
-      - rabbitmq
+networks:
+  kafka-net:
+    driver: bridge
