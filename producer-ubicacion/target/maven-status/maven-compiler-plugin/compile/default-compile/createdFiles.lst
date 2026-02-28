@@ -1,5 +1,7 @@
-cl/transporte/producer_ubicacion/service/UbicacionProducer.class
 cl/transporte/producer_ubicacion/ProducerUbicacionApplication.class
 cl/transporte/producer_ubicacion/config/RabbitConfig.class
+cl/transporte/producer_ubicacion/controller/ProducerController.class
 cl/transporte/producer_ubicacion/controller/UbicacionController.class
 cl/transporte/producer_ubicacion/dto/UbicacionMsg.class
+cl/transporte/producer_ubicacion/service/UbicacionProducer.class
+cl/transporte/producer_ubicacion/service/UbicacionScheduler.class

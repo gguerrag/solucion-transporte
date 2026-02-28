@@ -1,5 +1,7 @@
 /Users/gonzaloguerragaldames/Downloads/solucion-transporte/producer-ubicacion/src/main/java/cl/transporte/producer_ubicacion/ProducerUbicacionApplication.java
 /Users/gonzaloguerragaldames/Downloads/solucion-transporte/producer-ubicacion/src/main/java/cl/transporte/producer_ubicacion/config/RabbitConfig.java
+/Users/gonzaloguerragaldames/Downloads/solucion-transporte/producer-ubicacion/src/main/java/cl/transporte/producer_ubicacion/controller/ProducerController.java
 /Users/gonzaloguerragaldames/Downloads/solucion-transporte/producer-ubicacion/src/main/java/cl/transporte/producer_ubicacion/controller/UbicacionController.java
 /Users/gonzaloguerragaldames/Downloads/solucion-transporte/producer-ubicacion/src/main/java/cl/transporte/producer_ubicacion/dto/UbicacionMsg.java
 /Users/gonzaloguerragaldames/Downloads/solucion-transporte/producer-ubicacion/src/main/java/cl/transporte/producer_ubicacion/service/UbicacionProducer.java
+/Users/gonzaloguerragaldames/Downloads/solucion-transporte/producer-ubicacion/src/main/java/cl/transporte/producer_ubicacion/service/UbicacionScheduler.java
